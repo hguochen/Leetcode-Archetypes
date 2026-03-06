@@ -70,6 +70,24 @@ Find two numbers satisfying condition
 
 # 3. Core Template
 
+## Template
+
+```
+Map<Integer, Integer> freq = new HashMap<>();
+int result = 0;
+
+for (int x : nums) {
+
+    int needed = ...;   // value required to form pair
+
+    result += freq.getOrDefault(needed, 0);
+
+    freq.put(x, freq.getOrDefault(x, 0) + 1);
+}
+
+return result;
+```
+
 ## Basic pair enumeration
 
 ```
@@ -416,3 +434,5 @@ You know this archetype when you can instantly recognize these problems:
 * Pairs with difference
 * Pairs divisible by k
 * Pairs with equal values
+
+
