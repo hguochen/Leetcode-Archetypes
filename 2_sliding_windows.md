@@ -42,7 +42,14 @@ Sliding window is an optimization for contiguous ranges.
 Instead of checking all subarrays:
 
 ```
-O(n^2)
+// O(n^2)
+
+[0..0]
+[0..1]
+[0..2]
+[1..1]
+[1..2]
+[2..2]
 ```
 
 we maintain a moving window:
@@ -874,7 +881,108 @@ O(n)
 interviewers love hearing this reasoning
 * * *
 
-# 11. The First Problems You Should Do
+# 11. Common Invariants
+
+Sliding window problems almost always use one of these:
+
+
+## Distinct count
+
+```
+freq.size() <= k
+```
+
+example:
+
+```
+K distinct integers
+```
+
+## Sum constraint
+
+```
+sum <= target
+```
+
+example:
+
+```
+Minimum size subarray sum
+```
+
+## Frequency constraint
+
+```
+freq[char] >= k
+```
+
+example:
+
+```
+longest substring with at least K repeating characters
+```
+
+## Cost constraint
+
+```
+cost <= k
+```
+
+example:
+
+```
+Frequency of the Most Frequent Element
+```
+
+* * *
+
+# 12. Important Sliding Window Tricks
+
+## Trick 1 - Counting trick
+
+```
+count += right - left + 1
+```
+
+this converts window length → number of subarrays
+
+
+## Trick 2 - Exactly-K trick
+
+```
+exactly(k) = atMost(k) - atMost(k - 1)
+```
+
+One of the most important interview tricks
+
+
+## Trick 3 - Fixed distinct characters
+
+used in:
+
+```
+longest substring with at least K repeating characters
+```
+
+idea:
+
+```
+loop distinct = 1..26
+run sliding window
+```
+
+## Trick 4 - Sorting + window
+
+used in:
+
+```
+Frequency of Most Frequent Element
+```
+
+Sorting lets us treat the rightmost value as target.
+* * *
+
+# 13. The First Problems You Should Do
 
 exactly in this order(best learning curve):
 
@@ -899,7 +1007,7 @@ hard shrink logic
 
 * * *
 
-# 12. The Single Most Important Sliding Window Insight
+# 14. The Single Most Important Sliding Window Insight
 
 sliding window is **state management.**
 the real skill is maintaining the window invariant
@@ -923,3 +1031,4 @@ window sum >= target
 ```
 
 the entire algorithm revolves around **maintaining this invariant**
+
