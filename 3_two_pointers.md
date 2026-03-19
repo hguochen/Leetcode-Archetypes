@@ -303,6 +303,72 @@ else
     right--;
 ```
 
+## Two-Ends Fill-from-Back
+
+Use this pattern when:
+
+* array is sorted
+* transformation can break ordering(eg. square, absolute, distance)
+* you need the result sorted
+* largest values come from either end
+
+Signal:
+
+* the max result comes from either the leftmost or rightmost element
+
+Key Invariant:
+
+```
+result[idx+1 ... n-1] = already sorted largest elements
+```
+
+Core Idea
+
+* maintain 2 pointers
+
+```
+left = 0
+right = n - 1
+```
+
+* maintain a write pointer
+
+```
+// fill from the back
+idx = n - 1
+```
+
+At each step:
+
+* compare contribution from left vs right
+* put the large one at result[idx]
+* move that pointer inward
+* decrement idx
+
+template:
+
+```
+int[] result = new int[n];
+
+int left = 0;
+int right = n - 1;
+int idx = n - 1;
+
+while (left <= right) {
+    int leftVal = transform(nums[left]);
+    int rightVal = transform(nums[right]);
+
+    if (leftVal > rightVal) {
+        result[idx] = leftVal;
+        left++;
+    } else {
+        result[idx] = rightVal;
+        right--;
+    }
+    idx--;
+}
+```
+
 * * *
 
 # 3. Complexity
