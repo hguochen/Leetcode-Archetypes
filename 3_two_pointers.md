@@ -1,5 +1,7 @@
 # 🧩 Cheat Sheet - Archetype 3 Two Pointers
 
+>Two pointers = using monotonic pointer movement to eliminate search space in O(n)
+
 # 0. Should you use Two Pointers?
 
 ## **❌ When NOT to Use Two Pointers**
@@ -168,7 +170,7 @@ Examples
 
 Signal
 
-* symmetry or mirrore comparison
+* symmetry or mirror comparison
 
 * * *
 
@@ -286,7 +288,23 @@ for (int i = 0; i < nums.length; i++) {
 
 ## Greedy Two Pointers
 
-example: Container with most water
+Used when:
+
+* you are making local optimal decisions
+* usually involves smallest vs largest
+
+Examples:
+
+* Boats to save people
+* Bag of Tokens
+* Container with Most Water
+
+Pattern:
+
+```
+if (can_use_smallest) -> use it
+else -> target largest
+```
 
 rule:
 
@@ -470,7 +488,106 @@ private void reverse(char[] arr, int left, int right) {
 
 * * *
 
-# 3. Complexity
+# 3. Pointer Rules (MOST IMPORTANT)
+
+## Pointer Movements
+
+At every step:
+
+👉 You MUST be able to justify:
+"Moving this pointer eliminates a portion of the search space safely"
+
+If you cannot justify pointer movement → DO NOT use two pointers
+
+Examples:
+
+
+```
+Sorted sum:
+if (sum < target) → left++ (increase sum)
+if (sum > target) → right-- (decrease sum)
+
+Container:
+move the smaller height (larger one is useless bottleneck)
+
+Palindrome:
+move both when equal, otherwise fail
+```
+
+## Loop Condition Patterns
+
+Two common patterns:
+
+
+### 1. left < right
+
+Used when:
+
+* comparing pairs
+* need 2 distinct elements
+
+Examples:
+
+* 2Sum sorted
+* container
+* palindrome
+
+### 2. left <= right
+
+Used when:
+
+* single element still needs processing
+* middle element matters
+
+Examples:
+
+* bag of tokens
+* watering plants II
+
+## Dedup Handling
+
+Deduplication. When problem requires unique results:
+
+* skip duplicates AFTER using a value
+
+```
+Example (3Sum):
+
+while (left < right && nums[left] == nums[left - 1]) left++;
+while (left < right && nums[right] == nums[right + 1]) right--;
+```
+
+* skip duplicates BEFORE fixing i
+
+```
+if (i > 0 && nums[i] == nums[i - 1]) continue;
+```
+
+## Stable vs Unstable Partition
+
+### Unstable (swap-based)
+
+* changes relative order
+* O(1) space
+
+Examples:
+
+* sort colors
+* move zeros (optimized version)
+
+### Stable
+
+* preserves order
+* usually requires extra space
+
+Examples:
+
+* pivot array
+* rearrange by sign
+
+* * *
+
+# 4. Complexity
 
 two pointers works because each pointer moves monotonically
 
@@ -488,7 +605,7 @@ this archetype is one of the highest frequency interview patterns and combines h
 * prefix sum
 * binary search
 
-# 4. Pitfalls
+# 5. Pitfalls
 
 * If partitioning must preserve relative order, be very suspicious of swap-based two pointers.
 * Stable partition usually needs extra space.
