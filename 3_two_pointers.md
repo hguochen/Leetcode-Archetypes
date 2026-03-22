@@ -303,6 +303,8 @@ else
     right--;
 ```
 
+
+
 ## Two-Ends Fill-from-Back
 
 Use this pattern when:
@@ -369,6 +371,103 @@ while (left <= right) {
 }
 ```
 
+
+
+## Chunk Processing
+
+Process an array/string in fixed-size blocks, often with different logic per chunk.
+
+Recognition signals:
+
+```
+- "for every k elements"
+- "for every 2k block"
+- "reverse first k, skip next k"
+- "process in groups"
+- "block-based transformation"
+```
+
+Common mistakes:
+
+```
+❌ Using cumulative step (e.g., start += 2*k*base)
+✅ Always use fixed step: start += chunkSize
+
+❌ Forgetting boundary checks
+✅ Always clamp with Math.min(..., n - 1)
+
+❌ Off-by-one errors on end index
+✅ end = start + size - 1
+
+❌ Using <= in reverse loop
+✅ use while (left < right)
+```
+
+
+template 1: basic chunk iteration
+
+```
+for (int start = 0; start < n; start += chunkSize) {
+    int end = Math.min(start + chunkSize - 1, n - 1);
+
+    // process range [start, end]
+}
+```
+
+template 2: process first k in Every 2k (LC541 pattern)
+
+```
+for (int start = 0; start < n; start += 2 * k) {
+    int left = start;
+    int right = Math.min(start + k - 1, n - 1);
+
+    reverse(arr, left, right);
+}
+```
+
+template 3: chunk conditional logic
+
+```
+for (int start = 0; start < n; start += chunkSize) {
+    int remaining = n - start;
+
+    if (remaining < k) {
+        // case 1: less than k
+    } else if (remaining < 2 * k) {
+        // case 2: between k and 2k
+    } else {
+        // case 3: full chunk
+    }
+}
+```
+
+template 4: 2 phase chunk processing
+
+```
+for (int start = 0; start < n; start += chunkSize) {
+    int mid = Math.min(start + k - 1, n - 1);
+    int end = Math.min(start + chunkSize - 1, n - 1);
+
+    // phase 1: process [start, mid]
+    // phase 2: process [mid+1, end]
+}
+```
+
+common helper(reverse)
+
+```
+private void reverse(char[] arr, int left, int right) {
+    while (left < right) {
+        char temp = arr[left];
+        arr[left] = arr[right];
+        arr[right] = temp;
+        left++;
+        right--;
+    }
+}
+```
+
+
 * * *
 
 # 3. Complexity
@@ -389,4 +488,8 @@ this archetype is one of the highest frequency interview patterns and combines h
 * prefix sum
 * binary search
 
+# 4. Pitfalls
+
+* If partitioning must preserve relative order, be very suspicious of swap-based two pointers.
+* Stable partition usually needs extra space.
 
