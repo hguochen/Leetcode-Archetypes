@@ -13,27 +13,73 @@ Why
 
 ## When to use this Archetype:
 
-* number of subarrays
+* subarray + sum / range accumulation
 * sum equals k
-* continuous subarray
-* negative numbers present
-* modulo conditions
+* count subarrays
+* modulo / divisible by k
+* negative numbers break sliding window
+* maximize / minimize subarray sum
+* many range-sum queries
 
-## When NOT to use this Archetype:
+## When NOT to default to this archetype:
 
-❌ If:
+* all numbers positive AND constraint is monotonic over a moving window
 
-*    strictly positive numbers
-*    monotonic condition exists
+  → consider Sliding Window
 
-→ Use Sliding Window instead
+* fixed-size window
+
+  → consider Fixed Sliding Window
+
+* optimize max/min subarray sum directly
+
+  → consider Kadane
+
+* many range updates
+
+  → consider Difference Array
+
+## Subarray / Interval Decision Gate
+
+```
+1. Is it contiguous?
+   - no → not this archetype
+   - yes → continue
+
+2. Is it a sum / range accumulation problem?
+   - yes → continue
+   - no → maybe other archetype
+
+3. Are all values positive and condition monotonic?
+   - yes → Sliding Window
+   - no → continue
+
+4. Is it asking for:
+   - count / exact sum / modulo / longest-shortest with arbitrary integers?
+     → Prefix Sum + HashMap
+   - max/min subarray sum?
+     → Kadane
+   - many offline range queries?
+     → Prefix Query
+   - sum over all subarrays?
+     → Contribution Counting
+```
+
 * * *
 
 # 1. Core Documentation
 
+```
+This archetype has 4 internal engines:
+- prefix + hashmap
+- Kadane
+- prefix query
+- contribution counting
+```
+
 ## 1.1 Core Insight (this unlocks everything)
 
-Every subarray problem is secretly a pair problem
+Many subarray sum problems can be rewritten as pair problems on the prefix array
 
 ```
 nums[i...j]
@@ -83,7 +129,7 @@ Brute force = O(n^2) or O(n^3) (if sum computed repeatedly)
 Define:
 
 ```
-prefix[i] = sum of sums[0...i-1]
+prefix[i] = sum of nums[0...i-1]
 ```
 
 Then:
@@ -121,7 +167,7 @@ Subarray Problem
 -> hashmap lookup
 ```
 
-# 2. 3 Problem Classes
+# 2. Problem Classes
 
 Every subarray/interval enumeration question falls into ONE of these:
 
@@ -188,6 +234,7 @@ Key Idea:
 
 ```
 (prefix[j] - prefix[i]) % k == 0
+→ (prefix[j] % k - prefix[i] % k) % k == 0
 → prefix[j] % k == prefix[i] % k
 ```
 
@@ -197,11 +244,59 @@ Example:
 
 * #974 Subarray Sums Divisible by K
 
+## **🟢** 2.4. Subarray sums
+
+Question asks:
+
+* sum of all subarrays
+* sum of all odd/even subarrays
+* sum over every interval
+
+Ask:
+
+```
+Can i count how many times each element contributes?
+```
+
+Do this drill without jumping to the formula
+
+Use:
+
+```
+arr = [1, 4, 2, 5, 3]
+```
+
+Focus only on:
+
+```
+index i = 1   value = 4
+```
+
+We need to derive how many odd-length subarrays include arr[i]
+
+Follow these exact steps:
+
+```
+1. List all possible start indices for subarrays containing index 1
+2. List all possible end indices for subarrays containing index 1
+3. Count total number of subarrays containing index 1
+4. Explicitly list all those subarrays
+5. From that list, keep only the odd-length ones. (or what the question specifies as qualifying subarray)
+6. Count them
+7. Multiply that count by arr[1] to get the total contribution of value 4
+
+```
+
+
+Example:
+
+* [#1588 Sum of all Odd Length Subarrays](https://leetcode.com/problems/sum-of-all-odd-length-subarrays/description/)
+
 * * *
 
 # **🧠 3.** Core Patterns
 
-## **⭐** 2.1 Prefix Sum + HashMap
+## **⭐** 2.1 Prefix Sum + HashMap (Count)
 
 ```
 int count = 0;
@@ -218,22 +313,48 @@ for (int num : nums) {
 }
 ```
 
-## **⭐** 2.2 Max Length Template / Kadane
+## **⭐** 2.2 Max Length Template (Max Length)
 
 ```
 Map<Integer, Integer> map = new HashMap<>();
-map.put(0, 1);
+map.put(0, -1);
 
 int prefix = 0;
 int maxLen = 0;
 
 for (int i = 0; i < nums.length; i++) {
-    prefix != nums[i];
+    prefix += nums[i];
     
     if (map.containsKey(prefix - k)) {
         maxLen = Math.max(maxLen, i - map.get(prefix - k));
     }
-    map.putIfAbsent(prefix, j);
+    map.putIfAbsent(prefix, i);
+}
+```
+
+## **⭐**2.2.1 Kadane
+
+Maximum Subarray Variant
+
+```
+int current = nums[0];
+int best = nums[0];
+
+for (int i = 1; i < nums.length; i++) {
+    current = Math.max(nums[i], current + nums[i]);
+    best = Math.max(best, current);
+}
+```
+
+Minimum Subarray Variant
+
+```
+int current = nums[0];
+int best = nums[0];
+
+for (int i = 1; i < nums.length; i++) {
+    current = Math.min(nums[i], current + nums[i]);
+    best = Math.min(best, current);
 }
 ```
 
@@ -245,7 +366,7 @@ Map<Integer, Integer> map = new HashMap<>();
 map.put(0, 1);
 
 for (int num : nums) {
-    prefix = (prefix + sum) % k;
+    prefix = (prefix + num) % k;
     if (prefix < 0) prefix += k;
     
     count += map.getOrDefault(prefix, 0);
@@ -260,9 +381,9 @@ for (int num : nums) {
 If you see ANY of these → this archetype
 
 
-## **🚨** 3.1 Signal 1 - “subarray”
+## **🚨** 3.1 Signal 1 - “subarray + sum/range accumulation”
 
-→ immediate prefix sum
+→ consider prefix sum / Kadane / sliding window
 
 
 ## **🚨** 3.2 Signal 2 - “sum equals k”
@@ -349,5 +470,186 @@ So calculating length is:
 ```
 j - (i + 1) + 1
 -> j - i
+```
+
+* * *
+
+# 5. PrefixSum + Hashmap solving framework
+
+For subarray + prefix sum problems, force yourself to go through this exact sequence
+We will use #1590 https://leetcode.com/problems/make-sum-divisible-by-p/description/ as illustration.
+
+## Step 1: Write the brute-force condition as an equation
+
+Not english. Equation.
+
+```
+(total - subArraySum) % p == 0
+```
+
+Then reduce it:
+
+```
+subArraySum % p == total % p
+```
+
+Let:
+
+```
+target = total % p
+```
+
+So:
+
+```
+subArraySum % p == target
+```
+
+## Step 2: Expand subarray sum using prefix sums
+
+```
+subArraySum(i..j) = prefix[j+1] - prefix[i]
+```
+
+Plug it in:
+
+```
+(prefix[j+1] - prefix[i]) % p == target
+```
+
+
+
+## Step 3: Rearrange until one side is “past thing”, the other is “current thing”
+
+You want a lookup problem of the form:
+
+```
+past = function(current)
+```
+
+So rearrange:
+
+```
+prefix[i] % p = (prefix[j+1] % p - target + p) % p
+```
+
+This is the key step.
+
+Now it is obvious:
+
+* current thing = prefix[j+1] % p
+* past thing to look up = needed prefix mod
+
+So hashmap key must be:
+
+```
+prefixMod
+```
+
+Not subarray sum. Not removed sum. not target.
+
+
+## Step 4: Ask: what is the question asking me to optimize?
+
+This determines hashmap value.
+
+Ask one of these:
+
+```
+- count how many?
+- does one exist?
+- longest length?
+- shortest length?
+```
+
+For each:
+
+
+### Count
+
+Store frequency.
+
+```
+map[key] = count
+```
+
+### Existence
+
+Store any index,, often earliest.
+
+
+### Longest length
+
+Store earliest index.
+
+```
+currentIndex - earliestIndex = largest
+```
+
+### Shortest length
+
+Store latest index.
+
+```
+currentIndex - latestIndex = smallest
+```
+
+
+
+## The subarray hashmap cheat rule
+
+Memorize this:
+
+```
+Hashmap key = the “past quantity” needed by the rearranged equation
+Hashmap value = whatever helps optimize the objective
+```
+
+* * *
+
+# 6. Solved problems canonical mappings
+
+|Problem type	|Rearranged lookup	|Map Key	|Map value	|
+|---	|---	|---	|---	|
+|
+Sum == k count	|
+prefix[i] = current - k	|
+prefix sum	|
+frequency	|
+|
+Sum == k longest	|
+prefix[i] = current - k	|
+prefix sum	|
+earliest index	|
+|
+Sum divisible by k count	|
+prefix[i] % k = current % k	|
+prefix mod	|
+frequency	|
+|
+Sum divisible by k exists	|
+same remainder	|
+prefix mod	|
+earliest index	|
+|
+Remove shortest subarray with mod target	|
+prefix[i] % p = needed	|
+prefix mod	|
+latest index	|
+
+* * *
+
+# 7. Decision Template for Prefix Sum 
+
+```
+1. Write brute-force condition
+2. Convert subarray to prefix difference
+3. Rearrange into past = function(current)
+4. Hashmap key = the past quantity
+5. Hashmap value = determined by objective
+   - count -> frequency
+   - exists -> useful index
+   - longest -> earliest index
+   - shortest -> latest index
 ```
 
