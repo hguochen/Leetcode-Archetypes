@@ -15,7 +15,7 @@ WHEN TO USE:
 - Unweighted graph or grid — every edge costs exactly 1
 - Spreading / infection / flooding measured in TIME
 - Distance from the NEAREST of several sources
-- DISQUALIFIER: edges have different weights  → Dijkstra (archetype 16)
+- DISQUALIFIER: edges have different weights  → Dijkstra (archetype 14)
   DISQUALIFIER: no distance asked, only "how many groups" → DFS (archetype 12)
 
 CORE FRAME:
@@ -283,7 +283,7 @@ ordering theorem.
 > node at distance `d` appends only nodes at distance `d+1`. Give edges
 > different weights and that step fails, the ordering collapses, and
 > first-arrival is no longer shortest. That is precisely the gap Dijkstra fills
-> with a priority queue — **archetype 16**. If a problem has weights, you are in
+> with a priority queue — **archetype 14**. If a problem has weights, you are in
 > the wrong archetype.
 
 > ✅ **Checkpoint:** say the "from → to" line out loud without looking, then
@@ -1109,15 +1109,21 @@ in preference to a 1-hop route of cost 100 — or vice versa — because BFS
 minimises *hop count*, and you were asked to minimise *cost*.
 
 ```java
-// ✅ CORRECT — this is Dijkstra, and it is archetype 16.
+// ✅ CORRECT — this is Dijkstra, and it is archetype 14.
 PriorityQueue<int[]> pq = new PriorityQueue<>((a, b) -> a[1] - b[1]);
 ```
 
 🧪 **Catch it with:** any graph where the cheapest path has more edges than the
 shortest path. If the input contains a weight array, stop and re-read §9.
 
-> ⏭️ Do not learn Dijkstra here. Finish this archetype, then meet it properly in
-> **archetype 16**, where the priority queue is the subject rather than a patch.
+> ⏭️ **Do not learn Dijkstra here — that split is deliberate.** Shortest path is
+> taught in two halves: **this archetype owns the unweighted case and the proof of
+> why it works**; **archetype 14 (Heap / Top-K) owns Dijkstra**, because Dijkstra
+> needs a priority queue and the heap is introduced there. Teaching it here would
+> mean reaching three archetypes forward for a data structure you do not have yet.
+>
+> When you get to 16, re-read §2 above first. The motivation is already built — you
+> will have proved exactly what Dijkstra is fixing.
 
 * * *
 
@@ -1299,12 +1305,12 @@ else                   dq.addLast(new int[]{nr, nc});    // costs 1
 ```
 
 **Buys you:** #2290, #1368. Note this is a plain deque, not a *monotonic* one —
-monotonic queues are archetype 21 and are a different technique entirely.
+monotonic queues are archetype 22 and are a different technique entirely.
 
 ⚠️ **This trick sits on the archetype's edge.** It works because 0/1 weights are
 the one weighted case where a deque preserves distance order. Widen the weights
 by even one value and the ordering theorem from §2 fails and you need a priority
-queue — **archetype 16**. See the boundary note on `#2290` in §10.
+queue — **archetype 14**. See the boundary note on `#2290` in §10.
 
 ## Trick 5 — Search from the smaller side
 
@@ -1383,7 +1389,7 @@ archetype 8, redo it this way; the graph version is shorter and generalises.
 | "the **maximum** number of steps / longest path" | DP or DFS, not BFS | **12 / 22+** |
 
 > 🧠 The single sharpest test: **does the problem give you numbers on the
-> edges?** If yes, you are in archetype 16, no matter how much the rest of it
+> edges?** If yes, you are in archetype 14, no matter how much the rest of it
 > looks like a grid walk. BFS minimises hops; Dijkstra minimises cost. They
 > coincide only when every hop costs 1.
 
@@ -1475,7 +1481,7 @@ something no other problem in the set does:
 Every other problem in this archetype minimises a **step count**. `#2290`
 minimises a **cost**: entering an empty cell is free, entering an obstacle costs
 one. By §9's own anti-signal table that phrasing points at Dijkstra —
-**archetype 16**, not here.
+**archetype 14**, not here.
 
 It is kept on purpose, as the problem that shows you exactly where BFS runs out:
 
@@ -1486,7 +1492,7 @@ weights 0 and 1 only   →  a Deque still works. Push cost-0 moves to the FRONT,
 
 any other weights      →  the theorem breaks. Draining distance d no longer
                           appends only d+1, so first-arrival is no longer
-                          shortest. You need a priority queue → archetype 16.
+                          shortest. You need a priority queue → archetype 14.
 ```
 
 Do it **last**, after the other nine. The lesson is not the technique; it is
@@ -1496,7 +1502,7 @@ true, because that is the sentence that defines this archetype's edge.
 Cut, with reasons — restore any of these if the archetype feels thin:
 
 ```
-#787   weighted edges → Dijkstra → archetype 16. Should not have been listed.
+#787   weighted edges → Dijkstra → archetype 14. Should not have been listed.
 #1298  queue simulation; never computes a distance
 #2684  asks for MAXIMUM moves → DP flavour
 #1311  BFS is 5 lines; the problem is sorting by frequency
@@ -1525,14 +1531,14 @@ Cut, with reasons — restore any of these if the archetype feels thin:
 #1311  A:one   B:pos       C:explicit(adj)      P1 + Trick 1
 ```
 
-> ⏭️ **Deliberately excluded — come back after archetype 19.** #847 Shortest
+> ⏭️ **Deliberately excluded — come back after archetype 20.** #847 Shortest
 > Path Visiting All Nodes and #864 Shortest Path to Get All Keys are the two
 > canonical next-level BFS problems, but both need **bitmask state** in the
-> visited key, which is archetype 19. They are Pattern 4 with `B:pos+bitmask` —
+> visited key, which is archetype 20. They are Pattern 4 with `B:pos+bitmask` —
 > the pattern you already know, waiting on one missing tool.
 >
-> ⏭️ **Also excluded — after archetype 20.** #2258 Escape the Spreading Fire is
-> multi-source BFS wrapped in a binary search on the wait time (archetype 20).
+> ⏭️ **Also excluded — after archetype 21.** #2258 Escape the Spreading Fire is
+> multi-source BFS wrapped in a binary search on the wait time (archetype 21).
 > The BFS half is already within reach; the search half is not.
 
 * * *
@@ -1587,8 +1593,8 @@ each actually belongs to.
 <summary>Answer key</summary>
 
 Decoys: **#200** → archetype 12, counts components, no distance asked.
-**#743** → archetype 16, edges carry travel times, so Dijkstra.
-**#207** → archetype 14, prerequisites over a DAG.
+**#743** → archetype 14, edges carry travel times, so Dijkstra.
+**#207** → archetype 15, prerequisites over a DAG.
 The rest are archetype 13: #1345 P3, #1765 P2, #815 P3, #1654 P4, #2385 P1 via Trick 6.
 
 </details>
@@ -1610,7 +1616,7 @@ Fill these in, out loud, timed:
 `#1162` A:many (all land cells) B:pos C:explicit → **P2**, plus Trick 1 if you
 want the full distance field.
 `#787` A:one B:pos+stops-used C:explicit adjacency → **P4**. Note the prices are
-weights, which normally means archetype 16 — but the *bound* is on stops, so a
+weights, which normally means archetype 14 — but the *bound* is on stops, so a
 layered BFS over stop-count with a `best[]` relaxation is the intended shape.
 Flag this one as genuinely borderline in an interview.
 
@@ -1637,12 +1643,12 @@ Edge cases    — start==target? start blocked? no sources? unreachable?
 ```
 4/4  → ✅ CONFIDENT.
         Work the remaining §10 problems at interview pace:
-        Medium ≤ 25 min, Hard ≤ 40 min. Then move to archetype 14.
+        Medium ≤ 25 min, Hard ≤ 40 min. Then move to archetype 15.
 
 3/4  → ⚠️  Route to the failed test's section in the table above.
         Retest ONLY that test. Do not re-read the whole document.
 
-≤2/4 → ❌ Do not proceed to archetype 14.
+≤2/4 → ❌ Do not proceed to archetype 15.
         Re-run Part B (§2–§6) including Gates 1 and 2. The gap is in the
         frame or the knobs, and no amount of extra problems will fix it.
 ```
