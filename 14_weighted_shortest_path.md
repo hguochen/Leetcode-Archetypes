@@ -32,6 +32,7 @@ THE KNOBS:
 A COST COMBINE   → sum | max | min | product      how an edge joins a path
 B STATE          → node | node + carried resource
 C EXTRACTION     → min-heap | max-heap | layered (Bellman-Ford) | triple loop (Floyd-Warshall)
+                   | g+h (A*, §8 Trick 1)
 
 PATTERNS AS KNOB SETTINGS:
 1. Dijkstra            = A:sum      B:node      C:min-heap
@@ -47,6 +48,7 @@ TEMPLATE SELECTOR:
 - "at most K stops / within T time"    → Pattern 3
 - "negative weights" or "exactly K edges" → Pattern 4, Bellman-Ford
 - "distance between EVERY pair"        → Pattern 4, Floyd-Warshall
+- huge grid, target location KNOWN     → A*, order by g + h  (§8 Trick 1)
 
 TIME / SPACE:
 - Dijkstra:        O((V + E) log V) time, O(V + E) space
@@ -421,6 +423,7 @@ stale check and the relaxation shape are identical in all four.
 │                 │                              │ max-heap    Dijkstra, maximising   │
 │                 │                              │ layered     Bellman-Ford           │
 │                 │                              │ triple loop Floyd-Warshall         │
+│                 │                              │ g + h       A*  (see §8 Trick 1)   │
 └─────────────────┴──────────────────────────────┴────────────────────────────────────┘
 
 Pattern 1  Dijkstra            = A:sum        B:node       C:min-heap
@@ -1199,22 +1202,179 @@ Rules: 30 min each · no hints · this doc CLOSED
 > These are **reframings**, not bug guards. Every bug guard lives in §7 and appears
 > nowhere else.
 
-## Trick 1 — A* : Dijkstra with a compass
+## Trick 1 — A\* : Dijkstra with a compass
 
-Dijkstra expands in every direction because it has no idea where the target is. If
-you can cheaply *estimate* the remaining distance, add it to the priority:
+Dijkstra expands outward in **every** direction because it has no idea where the
+target is. It finds the shortest path to *everywhere* and you throw most of that
+away. A\* fixes exactly that waste.
 
-```java
-// order by  cost-so-far + heuristic(remaining)
-pq.add(new int[]{r, c, d, d + manhattan(r, c, targetR, targetC)});
+### The one-line change
+
+```
+Dijkstra   priority = g(n)              cost from the source
+A*         priority = g(n) + h(n)       cost from the source + ESTIMATE to the target
 ```
 
-The heuristic must be **admissible** — never an over-estimate — or you lose
-optimality. Manhattan distance on a 4-directional grid is admissible; straight-line
-distance in Euclidean space is admissible.
+`g` is what you already track. `h` is a guess at the remaining distance. Everything
+else — the stale check, the relaxation, the `dist`/`g` map — is unchanged.
 
-**Buys you:** large sparse grids where the target is far away in a known direction.
-On LeetCode it is rarely *needed*, but naming it is a strong signal.
+### Admissibility is the load-bearing condition
+
+```
+h(n) must NEVER OVER-ESTIMATE the true remaining distance.
+```
+
+That is the whole correctness requirement, and the reason is §2's proof. Dijkstra
+pops the cheapest unfinalised node and calls it final. A\* pops the smallest
+`g + h`. If `h` never over-estimates, then when the goal is popped its `f` equals
+its true `g` — and every other node in the heap has `f ≥ that`, so none of them can
+lead anywhere cheaper. Over-estimate anywhere and that guarantee dies: A\* will
+happily return a suboptimal path and look confident doing it.
+
+```
+✅ admissible          Manhattan distance on a 4-directional grid
+✅ admissible          Chebyshev distance on an 8-directional grid
+✅ admissible          straight-line distance in Euclidean space
+✅ admissible          h(n) = 0        ← this is just Dijkstra. A* generalises it.
+❌ NOT admissible      Euclidean distance on a 4-directional grid (it under-counts
+                       the real turns, so it is fine — but Manhattan on an 8-dir
+                       grid OVER-counts, and that one breaks you)
+```
+
+> 🧠 `h = 0` being admissible is the useful way to hold this: **Dijkstra is A\* with
+> no information.** Every improvement to `h` narrows the search; a perfect `h` walks
+> straight to the answer.
+
+### Working code — `#773 Sliding Puzzle` with A\*
+
+The heuristic is the sum, over every tile, of its Manhattan distance from where it
+belongs. Admissible because one move relocates one tile by one cell, so no single
+move can reduce this sum by more than 1.
+
+```java
+class Solution {
+    private static final String GOAL = "123450";
+    private static final int[][] NB = {{1,3},{0,2,4},{1,5},{0,4},{1,3,5},{2,4}};
+
+    private static class Node {
+        final String state; final int g, f;
+        Node(String state, int g, int f) { this.state = state; this.g = g; this.f = f; }
+    }
+
+    public int slidingPuzzle(int[][] board) {
+        StringBuilder sb = new StringBuilder();
+        for (int[] row : board) for (int v : row) sb.append(v);
+        String start = sb.toString();
+        if (start.equals(GOAL)) return 0;
+
+        Map<String, Integer> g = new HashMap<>();
+        g.put(start, 0);
+        PriorityQueue<Node> pq = new PriorityQueue<>((a, b) -> Integer.compare(a.f, b.f));
+        pq.add(new Node(start, 0, heuristic(start)));
+
+        while (!pq.isEmpty()) {
+            Node cur = pq.poll();
+            if (cur.g > g.getOrDefault(cur.state, Integer.MAX_VALUE)) continue;  // stale
+            if (cur.state.equals(GOAL)) return cur.g;
+
+            int z = cur.state.indexOf('0');
+            for (int j : NB[z]) {
+                char[] a = cur.state.toCharArray();
+                char t = a[z]; a[z] = a[j]; a[j] = t;
+                String next = new String(a);
+                int ng = cur.g + 1;
+                if (ng < g.getOrDefault(next, Integer.MAX_VALUE)) {
+                    g.put(next, ng);
+                    pq.add(new Node(next, ng, ng + heuristic(next)));   // f = g + h
+                }
+            }
+        }
+        return -1;
+    }
+
+    /** Sum of Manhattan distances of each tile from its goal cell. Blank excluded. */
+    private static int heuristic(String s) {
+        int total = 0;
+        for (int i = 0; i < 6; i++) {
+            char c = s.charAt(i);
+            if (c == '0') continue;
+            int goal = c - '1';                       // tile '1' belongs at index 0
+            total += Math.abs(i / 3 - goal / 3) + Math.abs(i % 3 - goal % 3);
+        }
+        return total;
+    }
+}
+```
+
+### When it actually pays — measured, not asserted
+
+Verified against plain BFS on **all 720** boards: zero disagreements. States
+expanded, grouped by how deep the solution is:
+
+```
+depth   boards   BFS exp   A* exp   A*/BFS
+    1        2         2        4     200%   ← A* is WORSE
+    3        5        26       20      77%
+    5        7       106       44      42%
+    8       12       491      154      31%   ← best zone, ~3x saving
+   11       25      2255      709      31%
+   14       44      7579     2763      36%
+   17       21      6118     2647      43%
+   21        1       354      239      68%   ← degrades again
+```
+
+Three things fall out of that curve, and they generalise:
+
+```
+shallow searches   A* is SLOWER — heap overhead on a search BFS finishes instantly
+mid-depth          the sweet spot, ~3x fewer expansions
+very deep          degrades — you end up exploring most of the space regardless
+```
+
+And on an unbounded grid the trend runs the other way. `#675 Cut Off Trees`, which
+runs many point-to-point searches on one board:
+
+```
+grid     trees   BFS exp   A* exp   A*/BFS
+12x12       10       513      205      40%
+20x20       25      4113     1282      31%
+30x30       40     13035     3121      24%
+45x45       60     51035     9827      19%   ← 5x saving, and still improving
+```
+
+> 🔑 **The rule this gives you:** A\*'s advantage scales with how much of the search
+> space Dijkstra would waste. On a bounded space (720 puzzle states) the ceiling is
+> low. On an open grid with a distant target it grows without limit.
+
+### Why you rarely *need* it on LeetCode
+
+Constraints are set so plain Dijkstra passes. A\* is almost never required — but
+naming it, stating the admissibility condition, and knowing that `h = 0` reduces it
+to Dijkstra is a strong signal in an interview, especially for anything
+pathfinding-flavoured in a systems context.
+
+**Buys you:** `#773` (revisit), `#675`, and any large-grid pathfinding where the
+target's location is known.
+
+### 🎯 A\* practice — 2 problems
+
+These sit **outside** the 17-problem set. `#773` you already solved with plain BFS
+in archetype 13; the exercise is to redo it and *measure*.
+
+```
+□ #773 Sliding Puzzle          REVISIT from archetype 13.
+                               Implement A* with the Manhattan heuristic above.
+                               Instrument BOTH versions with an expansion counter
+                               and compare. Same answer, fewer nodes — that is the
+                               entire lesson, and it is measurable.
+
+□ #675 Cut Off Trees for Golf Event      Hard, new.
+                               Many repeated point-to-point searches on one grid,
+                               which is exactly where A* compounds. Cut from
+                               archetype 13 for being "repeated-BFS plumbing" —
+                               that same property is what makes it the right A*
+                               problem.
+```
 
 ## Trick 2 — Build the graph you need, not the one you were given
 
@@ -1355,6 +1515,10 @@ Are the edges WEIGHTED, and are you minimising a COST?
      │    └── product (maximise)                     → Pattern 2, MAX-heap
      │
      └── default: A:sum B:node C:min-heap            → Pattern 1
+
+     THEN, optionally: is the target's location KNOWN and the space large?
+          └── YES → order by g + h instead of g          → A*  (§8 Trick 1)
+                    h must never OVER-estimate, or optimality is lost
 ```
 
 Check Knob C first — a negative weight disqualifies the heap no matter what the
@@ -1407,7 +1571,15 @@ Priorities match `scripts/add_archetype14_reminders.sh`.
 | 2976 | [Minimum Cost to Convert String](https://leetcode.com/problems/minimum-cost-to-convert-string/) | Med | P4 | a 26-node alphabet graph makes `O(V³)` trivially fine |
 | 399 | [Evaluate Division](https://leetcode.com/problems/evaluate-division/) | Med | P4 | the graph is built from strings, and the cost is a product |
 
-**Totals:** 17 problems · 12 Medium / 5 Hard · flagship `#2812`
+### A\* practice · 2 problems, outside the 17
+
+| # | Problem | Diff | Status | What it is FOR |
+|---|---|---|---|---|
+| 773 | [Sliding Puzzle](https://leetcode.com/problems/sliding-puzzle/) | Hard | **revisit** from arch 13 | redo with A\* and COUNT expansions — the saving is measurable |
+| 675 | [Cut Off Trees for Golf Event](https://leetcode.com/problems/cut-off-trees-for-golf-event/) | Hard | new | many repeated searches on one grid — where A\* compounds |
+
+**Totals:** 17 core problems · 12 Medium / 5 Hard · flagship `#2812`
+Plus 2 A\* practice problems (`#675` new, `#773` revisit) — see §8 Trick 1.
 
 * * *
 
@@ -1424,6 +1596,8 @@ Pattern 4 · Bounded / all-pairs  #1462, #2976, #399
 
 Composite (2+ archetypes)        #2812 (arch 13 BFS + P2), #1786 (P1 + DP),
                                  #1368 (arch 13 0-1 BFS + P1)
+
+A* practice (outside the 17)     #773 (revisit from arch 13), #675
 ```
 
 ## By difficulty
@@ -1515,6 +1689,7 @@ Write from a blank file, no reference:
 □ the Bellman-Ford round loop, with the snapshot
 □ the Floyd-Warshall triple loop, with mid outermost
 □ the three flips needed to turn minimise into maximise
+□ the A* priority (g + h) and the one condition h must satisfy
 ```
 
 ### Test 2 — recognize
